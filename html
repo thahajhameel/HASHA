@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hasha — AI Teacher</title>
+<style>
+  :root{
+    --board-900:#0f2a24;
+    --board-800:#153a32;
+    --board-700:#1e4d43;
+    --chalk:#f4efe2;
+    --chalk-dim:#cfd8c9;
+    --amber:#e8a33d;
+    --amber-dim:#8a6a35;
+    --coral:#e0685a;
+    --sky:#5fb7c9;
+    --line: rgba(244,239,226,0.14);
+    --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(232,163,61,0.06), transparent 55%),
+      var(--board-900);
+    color:var(--chalk);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+  .app{max-width:1040px;margin:0 auto;padding:28px 20px 60px;}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand h1{font-family:var(--serif);font-weight:600;font-size:28px;margin:0;letter-spacing:0.2px;}
+  .brand span.tag{color:var(--chalk-dim);font-size:13px;}
+  .profile-chip{font-size:12px;color:var(--chalk-dim);background:var(--board-800);border:1px solid var(--line);padding:6px 12px;border-radius:100px;}
+ 
+  .panel{background:var(--board-800);border:1px solid var(--line);border-radius:6px;padding:24px;margin-bottom:18px;}
+  .panel h2{font-family:var(--serif);font-weight:600;font-size:20px;margin:0 0 14px;}
+  label{display:block;font-size:13px;color:var(--chalk-dim);margin:14px 0 6px;}
+  label:first-child{margin-top:0;}
+  textarea,input[type=text],select{
+    width:100%;background:var(--board-900);border:1px solid var(--line);color:var(--chalk);
+    padding:10px 12px;border-radius:4px;font-size:14.5px;font-family:var(--sans);
+  }
+  textarea{min-height:90px;resize:vertical;line-height:1.5;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  .pillgroup{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{
+    padding:7px 14px;border-radius:100px;border:1px solid var(--line);background:transparent;
+    color:var(--chalk-dim);font-size:13px;cursor:pointer;transition:all .15s;
+  }
+  .pill.active{background:var(--amber);border-color:var(--amber);color:#1a1207;font-weight:600;}
+  .pill:hover:not(.active){border-color:var(--amber-dim);color:var(--chalk);}
+  button.primary{
+    background:var(--amber);color:#1a1207;border:none;padding:12px 22px;border-radius:4px;
+    font-size:14.5px;font-weight:700;cursor:pointer;margin-top:18px;letter-spacing:0.2px;
+  }
+  button.primary:disabled{opacity:0.45;cursor:default;}
+  button.primary:hover:not(:disabled){background:#f2b358;}
+  button.ghost{
+    background:transparent;border:1px solid var(--line);color:var(--chalk-dim);
+    padding:9px 16px;border-radius:4px;font-size:13.5px;cursor:pointer;
+  }
+  button.ghost:hover{border-color:var(--amber-dim);color:var(--chalk);}
+ 
+  /* teaching room layout */
+  .room{display:grid;grid-template-columns:220px 1fr;gap:20px;}
+  .avatar-col{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .avatar-wrap{width:180px;height:180px;border-radius:50%;background:radial-gradient(circle at 35% 30%, var(--board-700), var(--board-900));border:1px solid var(--line);display:flex;align-items:center;justify-content:center;}
+  .speak-status{font-size:12px;color:var(--sky);min-height:16px;text-align:center;}
+  .progress-list{width:100%;font-size:12px;color:var(--chalk-dim);margin-top:6px;}
+  .progress-list .step{padding:5px 8px;border-radius:4px;margin-bottom:3px;border-left:2px solid transparent;}
+  .progress-list .step.done{color:var(--sky);border-left-color:var(--sky);}
+  .progress-list .step.current{color:var(--amber);border-left-color:var(--amber);background:rgba(232,163,61,0.08);}
+ 
+  .stage{min-height:340px;}
+  .concept-title{font-family:var(--serif);font-size:22px;margin:0 0 4px;}
+  .concept-meta{font-size:12px;color:var(--amber-dim);margin-bottom:14px;}
+  .explain-text{font-size:15.5px;line-height:1.7;color:var(--chalk);margin-bottom:16px;white-space:pre-wrap;}
+  .grounding-note{font-size:11.5px;color:var(--chalk-dim);border-left:2px solid var(--sky);padding:6px 10px;margin-bottom:16px;background:rgba(95,183,201,0.06);}
+ 
+  .visual-box{background:var(--board-900);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:18px;}
+  .visual-box svg{width:100%;height:auto;display:block;}
+  .visual-box pre{margin:0;font-family:var(--mono);font-size:13px;color:var(--sky);white-space:pre-wrap;}
+  .visual-box .out{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--chalk-dim);border-top:1px dashed var(--line);padding-top:8px;}
+ 
+  .question-box{border-top:1px solid var(--line);padding-top:16px;}
+  .qtext{font-size:15px;margin-bottom:12px;color:var(--chalk);}
+  .options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .opt{
+    text-align:left;padding:10px 14px;border:1px solid var(--line);border-radius:4px;background:transparent;
+    color:var(--chalk);cursor:pointer;font-size:14px;
+  }
+  .opt:hover{border-color:var(--amber-dim);}
+  .opt.selected{border-color:var(--amber);background:rgba(232,163,61,0.08);}
+  .opt.correct{border-color:var(--sky);background:rgba(95,183,201,0.1);}
+  .opt.wrong{border-color:var(--coral);background:rgba(224,104,90,0.1);}
+ 
+  .feedback{margin-top:14px;padding:12px 14px;border-radius:4px;font-size:14px;line-height:1.6;}
+  .feedback.correct{background:rgba(95,183,201,0.08);border-left:3px solid var(--sky);}
+  .feedback.wrong{background:rgba(224,104,90,0.08);border-left:3px solid var(--coral);}
+ 
+  .loading{color:var(--chalk-dim);font-size:14px;font-style:italic;}
+  .loading::after{content:"";display:inline-block;width:6px;}
+ 
+  .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;}
+  .report-card{background:var(--board-900);border:1px solid var(--line);border-radius:6px;padding:16px;}
+  .report-card h3{margin:0 0 8px;font-size:13px;color:var(--chalk-dim);text-transform:none;}
+  .score-big{font-family:var(--serif);font-size:40px;color:var(--amber);}
+  .taglist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .tag{font-size:12px;padding:4px 10px;border-radius:100px;border:1px solid var(--line);}
+  .tag.strong{color:var(--sky);border-color:rgba(95,183,201,0.4);}
+  .tag.weak{color:var(--coral);border-color:rgba(224,104,90,0.4);}
+ 
+  .langbar{display:flex;gap:8px;align-items:center;margin-bottom:16px;}
+  .langbar span{font-size:12px;color:var(--chalk-dim);}
+  textarea:focus,input:focus,select:focus,button:focus-visible{outline:2px solid var(--amber);outline-offset:1px;}
+</style>
+</head>
+<body>
+<div id="root" class="app">
+  <p style="color:#cfd8c9;font-size:13px;">Loading Hasha…</p>
+</div>
+<script>
+  window.addEventListener('error', function(e){
+    var root = document.getElementById('root');
+    if(root && root.textContent.indexOf('Loading Hasha') !== -1){
+      root.innerHTML = '<div style="color:#e0685a;font-family:sans-serif;padding:20px;border:1px solid #e0685a;border-radius:6px;">'
+        + '<strong>Something failed to load:</strong> ' + (e.message||'unknown error')
+        + '<br><br>Try opening this file directly in Chrome/Firefox (double-click the .html file) rather than a restricted preview pane.</div>';
+    }
+  });
+</script>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+ 
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef,useCallback} = React;
+ 
+// ---------- Claude API helper ----------
+async function callClaude(system, userText, maxTokens=1000){
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model:"claude-sonnet-4-6",
+      max_tokens: maxTokens,
+      system: system,
+      messages:[{role:"user",content:userText}]
+    })
+  });
+  const data = await res.json();
+  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  return text;
+}
+function parseJSON(text){
+  let t = text.trim();
+  t = t.replace(/^```json/i,"").replace(/^```/,"").replace(/```$/,"").trim();
+  const start = t.indexOf("{") === -1 ? t.indexOf("[") : t.indexOf("{");
+  const lastBrace = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  if(start>=0 && lastBrace>=0) t = t.slice(start, lastBrace+1);
+  try{ return JSON.parse(t); }catch(e){ console.error("parse fail",e,text); return null; }
+}
+ 
+// ---------- RAG-lite: naive paragraph retrieval ----------
+function chunkMaterial(text){
+  return text.split(/\n{2,}/).map(p=>p.trim()).filter(p=>p.length>40);
+}
+function retrieveChunks(chunks, query, topK=2){
+  if(chunks.length===0) return [];
+  const qWords = query.toLowerCase().split(/\W+/).filter(w=>w.length>3);
+  const scored = chunks.map(c=>{
+    const lc = c.toLowerCase();
+    let score = 0;
+    qWords.forEach(w=>{ if(lc.includes(w)) score += 1; });
+    return {c,score};
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  return scored.filter(s=>s.score>0).slice(0,topK).map(s=>s.c);
+}
+ 
+// ---------- Speech ----------
+function speak(text, langTag, onBoundary, onEnd){
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = langTag;
+  u.rate = 0.98;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v=>v.lang===langTag) || voices.find(v=>v.lang && v.lang.startsWith(langTag.split("-")[0]));
+  if(match) u.voice = match;
+  u.onboundary = onBoundary;
+  u.onend = onEnd;
+  window.speechSynthesis.speak(u);
+}
+const LANG_TAG = {English:"en-IN", Hindi:"hi-IN", Hinglish:"hi-IN", Tamil:"ta-IN", Tanglish:"ta-IN"};
+ 
+// ---------- Avatar ----------
+function Avatar({speaking}){
+  const [open,setOpen] = useState(false);
+  useEffect(()=>{
+    if(!speaking){ setOpen(false); return; }
+    const id = setInterval(()=>setOpen(o=>!o), 160);
+    return ()=>clearInterval(id);
+  },[speaking]);
+  return (
+    <svg viewBox="0 0 100 100" width="140" height="140">
+      <circle cx="50" cy="50" r="38" fill="#f4efe2" opacity="0.95"/>
+      <circle cx="37" cy="42" r="4" fill="#153a32"/>
+      <circle cx="63" cy="42" r="4" fill="#153a32"/>
+      {open
+        ? <ellipse cx="50" cy="63" rx="10" ry="7" fill="#153a32"/>
+        : <rect x="40" y="61" width="20" height="4" rx="2" fill="#153a32"/>}
+      <path d="M 20 30 Q 50 8 80 30" stroke="#e8a33d" strokeWidth="4" fill="none" strokeLinecap="round"/>
+    </svg>
+  );
+}
+ 
+// ---------- Visual renderer (deterministic, subject-aware) ----------
+function VisualBlock({spec}){
+  if(!spec || !spec.type) return null;
+  const {type, data} = spec;
+  if(type==="equation"){
+    return <div className="visual-box">
+      <div style={{fontFamily:"var(--serif)",fontSize:"22px",color:"#e8a33d",marginBottom:"8px"}}>{data.expression}</div>
+      <div style={{fontSize:"13px",color:"#cfd8c9"}}>{data.description}</div>
+    </div>;
+  }
+  if(type==="diagram_steps"){
+    return <div className="visual-box">
+      <svg viewBox={`0 0 600 ${60*data.steps.length+20}`}>
+        {data.steps.map((s,i)=>(
+          <g key={i} transform={`translate(0,${i*60})`}>
+            <rect x="0" y="10" width="560" height="42" rx="4" fill="#153a32" stroke="#e8a33d" strokeWidth="1"/>
+            <text x="16" y="36" fill="#f4efe2" fontSize="13">{`${i+1}. ${s}`}</text>
+            {i<data.steps.length-1 && <line x1="280" y1="52" x2="280" y2="70" stroke="#8a6a35" strokeWidth="2"/>}
+          </g>
+        ))}
+      </svg>
+    </div>;
+  }
+  if(type==="timeline"){
+    return <div className="visual-box">
+      <svg viewBox="0 0 600 140">
+        <line x1="20" y1="70" x2="580" y2="70" stroke="#e8a33d" strokeWidth="2"/>
+        {data.events.map((e,i)=>{
+          const x = 40 + i*((540)/Math.max(data.events.length-1,1));
+          return <g key={i}>
+            <circle cx={x} cy="70" r="5" fill="#5fb7c9"/>
+            <text x={x} y="55" fill="#e8a33d" fontSize="11" textAnchor="middle">{e.label}</text>
+            <text x={x} y="95" fill="#cfd8c9" fontSize="10" textAnchor="middle" transform={`rotate(0)`}>
+              <tspan x={x} dy="0">{(e.desc||"").slice(0,26)}</tspan>
+            </text>
+          </g>;
+        })}
+      </svg>
+    </div>;
+  }
+  if(type==="code"){
+    return <div className="visual-box">
+      <pre>{data.snippet}</pre>
+      {data.output && <div className="out">Output: {data.output}</div>}
+    </div>;
+  }
+  if(type==="graph_bar"){
+    const max = Math.max(...data.values, 1);
+    return <div className="visual-box">
+      <svg viewBox="0 0 600 200">
+        {data.values.map((v,i)=>{
+          const barW = 500/data.values.length - 12;
+          const x = 40 + i*(500/data.values.length);
+          const h = (v/max)*140;
+          return <g key={i}>
+            <rect x={x} y={170-h} width={barW} height={h} fill="#5fb7c9"/>
+            <text x={x+barW/2} y="188" fill="#cfd8c9" fontSize="10" textAnchor="middle">{data.labels[i]}</text>
+            <text x={x+barW/2} y={165-h} fill="#e8a33d" fontSize="10" textAnchor="middle">{v}{data.unit||""}</text>
+          </g>;
+        })}
+      </svg>
+    </div>;
+  }
+  // bullets fallback
+  return <div className="visual-box">
+    <ul style={{margin:0,paddingLeft:"18px",color:"#f4efe2",fontSize:"14px",lineHeight:"1.8"}}>
+      {(data.items||[]).map((it,i)=><li key={i}>{it}</li>)}
+    </ul>
+  </div>;
+}
+ 
+// ---------- Main App ----------
+function App(){
+  const [stage,setStage] = useState("setup"); // setup | planning | teaching | reteach | quiz | report
+  const [material,setMaterial] = useState("");
+  const [topic,setTopic] = useState("Ohm's Law and Electric Current");
+  const [level,setLevel] = useState("Beginner");
+  const [time,setTime] = useState("20 minutes");
+  const [language,setLanguage] = useState("English");
+  const [studentName,setStudentName] = useState("Student");
+ 
+  const [plan,setPlan] = useState(null); // {concepts:[{title,why}]}
+  const [conceptIdx,setConceptIdx] = useState(0);
+  const [conceptData,setConceptData] = useState(null); // {explanation,visual,question,groundedFrom}
+  const [busy,setBusy] = useState(false);
+  const [speaking,setSpeaking] = useState(false);
+  const [selectedOpt,setSelectedOpt] = useState(null);
+  const [answerText,setAnswerText] = useState("");
+  const [evalResult,setEvalResult] = useState(null);
+  const [reteachCount,setReteachCount] = useState(0);
+ 
+  const [profile,setProfile] = useState({strong:[],weak:[],history:[]});
+  const [quiz,setQuiz] = useState(null);
+  const [quizAnswers,setQuizAnswers] = useState({});
+  const [report,setReport] = useState(null);
+ 
+  const chunksRef = useRef([]);
+ 
+  // load persisted profile
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const r = await window.storage.get("profile:main");
+        if(r && r.value) setProfile(JSON.parse(r.value));
+      }catch(e){ /* no profile yet */ }
+    })();
+  },[]);
+  const saveProfile = useCallback(async (p)=>{
+    setProfile(p);
+    try{ await window.storage.set("profile:main", JSON.stringify(p)); }catch(e){}
+  },[]);
+ 
+  const langTag = LANG_TAG[language];
+ 
+  // ---- Step 1: generate lesson plan ----
+  async function startLesson(){
+    setBusy(true); setStage("planning");
+    chunksRef.current = material.trim() ? chunkMaterial(material) : [];
+    const sys = `You are a curriculum planner for an AI teacher. Output ONLY valid JSON, no prose, no markdown fences.`;
+    const groundingNote = chunksRef.current.length
+      ? `The student uploaded material. Base the concept list on this material:\n"""${material.slice(0,3000)}"""`
+      : `No material uploaded. Build the concept list from your own knowledge of the topic.`;
+    const user = `Topic: "${topic}"
+Learner level: ${level}
+Available time: ${time}
+Teaching language: ${language}
+${groundingNote}
+ 
+Return JSON: {"concepts":[{"title":"...","why":"one line on why this comes at this point"}]}
+Number of concepts should fit the time budget (5 min -> 2 concepts, 20 min -> 3-4, 60 min -> 5-6, 7 days -> 6-8 as a revision path). Order concepts from foundational to advanced, respecting prerequisites.`;
+    const text = await callClaude(sys, user, 700);
+    const parsed = parseJSON(text);
+    setBusy(false);
+    if(parsed && parsed.concepts && parsed.concepts.length){
+      setPlan(parsed);
+      setConceptIdx(0);
+      setStage("teaching");
+      loadConcept(parsed.concepts[0], 0);
+    } else {
+      alert("Could not generate a lesson plan. Try again.");
+      setStage("setup");
+    }
+  }
+ 
+  // ---- Step 2: generate explanation+visual+question for a concept ----
+  async function loadConcept(concept, idx, altAnalogy=false){
+    setBusy(true); setConceptData(null); setEvalResult(null); setSelectedOpt(null); setAnswerText("");
+    const grounded = retrieveChunks(chunksRef.current, concept.title, 2);
+    const sys = `You are a warm, human-like AI teacher speaking directly to a ${level} learner. Respond ONLY in ${language} (if Hinglish, mix Hindi and English naturally in Latin script; if Tamil, use Tamil script; if Tanglish, mix Tamil and English naturally in Latin script). Output ONLY valid JSON, no prose outside JSON.`;
+    const user = `Teach this concept: "${concept.title}" (part of lesson on "${topic}").
+${grounded.length ? `Ground your explanation in this source material where relevant:\n"""${grounded.join("\n---\n")}"""` : "No source material; use your own accurate knowledge."}
+${altAnalogy ? "The student struggled last time — use a DIFFERENT analogy/approach than a typical explanation." : ""}
+ 
+Return JSON exactly like:
+{
+ "explanation": "2-4 short paragraphs, ${level}-appropriate, spoken teaching tone",
+ "visual": {"type":"equation|diagram_steps|timeline|code|graph_bar|bullets", "data": { ... fields matching the type ... }},
+ "question": {
+   "prompt":"a checkpoint question testing this concept",
+   "format":"mcq or short_answer",
+   "options":["only if mcq, 3-4 options"],
+   "correctAnswer":"the correct option text or ideal short answer"
+ }
+}
+Pick the visual type that best fits the subject (equation for math/physics formulas, diagram_steps for processes, timeline for historical/sequential events, code for programming, graph_bar for comparative data, bullets otherwise).`;
+    const text = await callClaude(sys, user, 1000);
+    const parsed = parseJSON(text);
+    setBusy(false);
+    if(parsed){
+      setConceptData({...parsed, groundedFrom: grounded.length>0});
+      speak(parsed.explanation.replace(/[*#_`]/g,""), langTag, ()=>{}, ()=>setSpeaking(false));
+      setSpeaking(true);
+    }
+  }
+ 
+  function selectMCQ(opt){
+    if(evalResult) return;
+    setSelectedOpt(opt);
+  }
+ 
+  async function submitAnswer(){
+    if(!conceptData) return;
+    const studentAnswer = conceptData.question.format==="mcq" ? selectedOpt : answerText;
+    if(!studentAnswer){ return; }
+    setBusy(true);
+    const sys = `You are evaluating a student's answer as an adaptive AI teacher. Output ONLY valid JSON.`;
+    const user = `Question: "${conceptData.question.prompt}"
+Correct answer: "${conceptData.question.correctAnswer}"
+Student answered: "${studentAnswer}"
+ 
+Return JSON:
+{"correct": true/false, "misconception": "if wrong, name the specific misunderstanding in one sentence, else empty string", "feedback": "1-3 sentence constructive feedback in ${language}", "nextAction": "continue or reteach"}
+Mark "reteach" only if the answer reveals a real conceptual gap, not a minor wording issue.`;
+    const text = await callClaude(sys, user, 500);
+    const parsed = parseJSON(text);
+    setBusy(false);
+    if(parsed){
+      setEvalResult(parsed);
+      const concept = plan.concepts[conceptIdx];
+      const p = {...profile};
+      if(parsed.correct){
+        if(!p.strong.includes(concept.title)) p.strong.push(concept.title);
+      } else {
+        if(!p.weak.includes(concept.title)) p.weak.push(concept.title);
+      }
+      saveProfile(p);
+    }
+  }
+ 
+  function nextStep(){
+    window.speechSynthesis.cancel();
+    if(evalResult && !evalResult.correct && evalResult.nextAction==="reteach" && reteachCount < 1){
+      setReteachCount(r=>r+1);
+      loadConcept(plan.concepts[conceptIdx], conceptIdx, true);
+      return;
+    }
+    setReteachCount(0);
+    const nextIdx = conceptIdx+1;
+    if(nextIdx < plan.concepts.length){
+      setConceptIdx(nextIdx);
+      loadConcept(plan.concepts[nextIdx], nextIdx);
+    } else {
+      startQuiz();
+    }
+  }
+ 
+  // ---- Final quiz ----
+  async function startQuiz(){
+    setStage("quiz"); setBusy(true);
+    const sys = `You write a short final quiz. Output ONLY valid JSON.`;
+    const user = `Lesson topic: "${topic}". Concepts covered: ${plan.concepts.map(c=>c.title).join(", ")}. Level: ${level}. Language: ${language}.
+Return JSON: {"questions":[{"prompt":"...","options":["a","b","c","d"],"correctAnswer":"exact matching option text"}]} with exactly 4 MCQ questions, one per concept where possible, in ${language}.`;
+    const text = await callClaude(sys, user, 900);
+    const parsed = parseJSON(text);
+    setBusy(false);
+    if(parsed) setQuiz(parsed);
+  }
+ 
+  async function submitQuiz(){
+    setBusy(true);
+    let correctCount = 0;
+    const weak = [], strong = [];
+    quiz.questions.forEach((q,i)=>{
+      const given = quizAnswers[i];
+      if(given===q.correctAnswer){ correctCount++; strong.push(q.prompt); }
+      else weak.push(q.prompt);
+    });
+    const score = Math.round((correctCount/quiz.questions.length)*100);
+    const sys = `You write a short encouraging learning report. Output ONLY valid JSON.`;
+    const user = `Topic: "${topic}". Score: ${score}%. Missed questions: ${JSON.stringify(weak)}. Correct questions: ${JSON.stringify(strong)}. Profile weak areas so far: ${JSON.stringify(profile.weak)}.
+Return JSON: {"summary":"2 sentence encouraging summary in ${language}", "strongAreas":["short concept names"], "weakAreas":["short concept names"], "recommendation":"one specific next step in ${language}"}`;
+    const text = await callClaude(sys, user, 500);
+    const parsed = parseJSON(text) || {summary:"",strongAreas:[],weakAreas:[],recommendation:""};
+    setBusy(false);
+    const rep = {score, ...parsed};
+    setReport(rep);
+    const p = {...profile, history:[...profile.history, {topic, score, date:new Date().toISOString().slice(0,10)}]};
+    saveProfile(p);
+    setStage("report");
+  }
+ 
+  function restart(){
+    window.speechSynthesis.cancel();
+    setStage("setup"); setPlan(null); setConceptIdx(0); setConceptData(null);
+    setQuiz(null); setQuizAnswers({}); setReport(null); setReteachCount(0);
+  }
+ 
+  // ---------- RENDER ----------
+  return (
+    <React.Fragment>
+      <header className="top">
+        <div className="brand">
+          <h1>Hasha</h1>
+          <span className="tag">an AI teacher that actually teaches</span>
+        </div>
+        <div className="profile-chip">
+          {profile.history.length} session{profile.history.length===1?"":"s"} · {profile.strong.length} strong · {profile.weak.length} weak
+        </div>
+      </header>
+ 
+      {stage==="setup" && (
+        <div className="panel">
+          <h2>What should we learn today?</h2>
+          <label>Topic or chapter</label>
+          <input type="text" value={topic} onChange={e=>setTopic(e.target.value)} placeholder="e.g. Newton's Laws, React Hooks, French Revolution" />
+ 
+          <label>Paste source material (optional — powers grounded, hallucination-resistant teaching)</label>
+          <textarea value={material} onChange={e=>setMaterial(e.target.value)} placeholder="Paste a chapter, notes, or article text here..." />
+ 
+          <div className="row" style={{marginTop:"14px"}}>
+            <div>
+              <label>Your level</label>
+              <div className="pillgroup">
+                {["Beginner","Intermediate","Advanced"].map(l=>(
+                  <button key={l} className={"pill"+(level===l?" active":"")} onClick={()=>setLevel(l)}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label>Time available</label>
+              <div className="pillgroup">
+                {["5 minutes","20 minutes","60 minutes","7 days"].map(t=>(
+                  <button key={t} className={"pill"+(time===t?" active":"")} onClick={()=>setTime(t)}>{t}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+ 
+          <label>Teaching language</label>
+          <div className="pillgroup">
+            {["English","Hindi","Hinglish","Tamil","Tanglish"].map(l=>(
+              <button key={l} className={"pill"+(language===l?" active":"")} onClick={()=>setLanguage(l)}>{l}</button>
+            ))}
+          </div>
+ 
+          <button className="primary" disabled={busy || !topic.trim()} onClick={startLesson}>
+            {busy ? "Planning your lesson..." : "Start the lesson"}
+          </button>
+        </div>
+      )}
+ 
+      {stage==="planning" && (
+        <div className="panel"><p className="loading">Reading the material and planning your lesson...</p></div>
+      )}
+ 
+      {(stage==="teaching") && plan && (
+        <div className="panel room">
+          <div className="avatar-col">
+            <div className="avatar-wrap"><Avatar speaking={speaking}/></div>
+            <div className="speak-status">{speaking ? "speaking..." : ""}</div>
+            <div className="progress-list">
+              {plan.concepts.map((c,i)=>(
+                <div key={i} className={"step "+(i<conceptIdx?"done":i===conceptIdx?"current":"")}>
+                  {i<conceptIdx ? "✓ " : ""}{c.title}
+                </div>
+              ))}
+            </div>
+            <button className="ghost" onClick={()=>window.speechSynthesis.cancel()}>Mute</button>
+          </div>
+ 
+          <div className="stage">
+            {busy && !conceptData && <p className="loading">Preparing the explanation...</p>}
+            {conceptData && (
+              <React.Fragment>
+                <h3 className="concept-title">{plan.concepts[conceptIdx].title}</h3>
+                <div className="concept-meta">{level} · {language} · concept {conceptIdx+1} of {plan.concepts.length}</div>
+                {conceptData.groundedFrom && <div className="grounding-note">Grounded in your uploaded material (retrieved matching passage)</div>}
+                <div className="explain-text">{conceptData.explanation}</div>
+                <VisualBlock spec={conceptData.visual} />
+ 
+                <div className="question-box">
+                  <div className="qtext">{conceptData.question.prompt}</div>
+                  {conceptData.question.format==="mcq" ? (
+                    <div className="options">
+                      {conceptData.question.options.map((o,i)=>{
+                        let cls = "opt";
+                        if(evalResult){
+                          if(o===conceptData.question.correctAnswer) cls += " correct";
+                          else if(o===selectedOpt) cls += " wrong";
+                        } else if(o===selectedOpt) cls += " selected";
+                        return <button key={i} className={cls} onClick={()=>selectMCQ(o)}>{o}</button>;
+                      })}
+                    </div>
+                  ) : (
+                    <input type="text" value={answerText} onChange={e=>setAnswerText(e.target.value)}
+                      disabled={!!evalResult} placeholder="Type your answer..." style={{marginBottom:"12px"}}/>
+                  )}
+ 
+                  {!evalResult ? (
+                    <button className="primary" disabled={busy || (conceptData.question.format==="mcq" ? !selectedOpt : !answerText)} onClick={submitAnswer}>
+                      {busy ? "Checking..." : "Submit answer"}
+                    </button>
+                  ) : (
+                    <React.Fragment>
+                      <div className={"feedback "+(evalResult.correct?"correct":"wrong")}>
+                        {evalResult.correct ? "✓ Correct. " : "Not quite. "}{evalResult.feedback}
+                        {!evalResult.correct && evalResult.misconception && (
+                          <div style={{marginTop:"6px",opacity:0.85}}>Misconception detected: {evalResult.misconception}</div>
+                        )}
+                      </div>
+                      <button className="primary" onClick={nextStep}>
+                        {(!evalResult.correct && evalResult.nextAction==="reteach" && reteachCount<1)
+                          ? "Re-explain this concept"
+                          : (conceptIdx+1<plan.concepts.length ? "Next concept" : "Go to final quiz")}
+                      </button>
+                    </React.Fragment>
+                  )}
+                </div>
+              </React.Fragment>
+            )}
+          </div>
+        </div>
+      )}
+ 
+      {stage==="quiz" && (
+        <div className="panel">
+          <h2>Final check</h2>
+          {busy && !quiz && <p className="loading">Building your quiz...</p>}
+          {quiz && (
+            <React.Fragment>
+              {quiz.questions.map((q,i)=>(
+                <div key={i} className="question-box" style={{marginBottom:"18px"}}>
+                  <div className="qtext">{i+1}. {q.prompt}</div>
+                  <div className="options">
+                    {q.options.map((o,j)=>(
+                      <button key={j} className={"opt"+(quizAnswers[i]===o?" selected":"")}
+                        onClick={()=>setQuizAnswers({...quizAnswers,[i]:o})}>{o}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button className="primary" disabled={busy || Object.keys(quizAnswers).length<quiz.questions.length} onClick={submitQuiz}>
+                {busy ? "Grading..." : "Submit quiz"}
+              </button>
+            </React.Fragment>
+          )}
+        </div>
+      )}
+ 
+      {stage==="report" && report && (
+        <div className="panel">
+          <h2>Learning report — {topic}</h2>
+          <div className="score-big">{report.score}%</div>
+          <p style={{color:"var(--chalk-dim)",fontSize:"14px"}}>{report.summary}</p>
+          <div className="report-grid">
+            <div className="report-card">
+              <h3>Strong areas</h3>
+              <div className="taglist">{report.strongAreas.map((a,i)=><span key={i} className="tag strong">{a}</span>)}</div>
+            </div>
+            <div className="report-card">
+              <h3>Needs improvement</h3>
+              <div className="taglist">{report.weakAreas.map((a,i)=><span key={i} className="tag weak">{a}</span>)}</div>
+            </div>
+          </div>
+          <div className="report-card" style={{marginTop:"14px"}}>
+            <h3>Recommended next step</h3>
+            <p style={{margin:0,fontSize:"14px"}}>{report.recommendation}</p>
+          </div>
+          <button className="primary" onClick={restart}>Start a new lesson</button>
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+ 
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
+ 
+
